@@ -23,13 +23,13 @@ After the app is deployed, do following GET requests
 
 -> http://localhost:8081/emailrecords/account?emailTo=test@email.com :
   This will extract account records from salesforce and convert to CSV file and attach it to email. Email body will contain 
-  "No. of account records : <num>"
+  "No. of account records : n"
   
 -> http://localhost:8081/emailrecords/product?emailTo=test@email.com :
   This will extract product records from salesforce and convert to CSV file and attach it to email. Email body will contain 
-  "No. of product records : <num>"
+  "No. of product records : n"
   
--> http://localhost:8081/emailrecords/<anything>?emailTo=test@email.com
+-> http://localhost:8081/emailrecords/{anything}?emailTo=test@email.com
   This will extract both account and product records from salesforce and convert to separate CSV files and attach it to email. Email body will contain 
-  "No. of product records : <num>
-   No. of  account records: <num1>"
+  "No. of product records : n
+   No. of  account records: m"
