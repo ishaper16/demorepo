@@ -8,5 +8,5 @@ http://www.springframework.org/schema/context http://www.springframework.org/sch
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
     <context:property-placeholder location="configuration-${env}.properties"/>
     <sfdc:config name="Salesforce__Basic_Authentication" username="${sfdc.username}" password="${sfdc.password}" securityToken="${sfdc.token}" doc:name="Salesforce: Basic Authentication" />
-    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="${http.port}" doc:name="HTTP Listener Configuration"/>
 </mule>
