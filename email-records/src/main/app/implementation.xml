@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <flow name="implementationFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/emailrecords/{recordtype}" doc:name="HTTP"/>
+        <flow-ref name="setFlowVariables" doc:name="setFlowVariables"/>
+        <flow-ref name="validations" doc:name="validations"/>
+        <choice doc:name="Choice">
+            <when expression="flowVars.recordtype == &quot;account&quot;">
+                <flow-ref name="getSalesforceAccounts" doc:name="getSalesforceAccounts"/>
+                <set-variable variableName="emailSubject" value="Account Records" doc:name="Set emailSubject"/>
+            </when>
+            <when expression="flowVars.recordtype == &quot;product&quot;">
+                <flow-ref name="getSalesforceProducts" doc:name="getSalesforceProducts"/>
+                <set-variable variableName="emailSubject" value="Product Records" doc:name="Set emailSubject"/>
+            </when>
+            <otherwise>
+                <flow-ref name="getSalesforceProductsNAccounts" doc:name="Get Salesforce Products and Accounts"/>
+                <set-variable variableName="emailSubject" value="Account and Product Records" doc:name="Set emailSubject"/>
+            </otherwise>
+        </choice>
+        <smtp:outbound-endpoint host="${mail.host}" port="${mail.port}" from="${mail.fromaddress}" responseTimeout="10000" doc:name="Send Email" to="#[flowVars.emailTo]" subject="#[flowVars.emailSubject]"/>
+    </flow>
+    <sub-flow name="setFlowVariables">
+        <set-variable variableName="recordtype" value="#[message.inboundProperties.'http.uri.params'.recordtype]" doc:name="Set recordType"/>
+        <set-variable variableName="emailTo" value="#[message.inboundProperties.'http.query.params'.emailTo]" doc:name="Set emailTo"/>
+    </sub-flow>
+    <sub-flow name="validations">
+        <validation:is-email message="&quot;Invalid Email Address&quot;" email="#[flowVars.emailTo]" doc:name="Validate Email"/>
+    </sub-flow>
+    <sub-flow name="attachCSV">
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/csv
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <set-attachment attachmentName="#[flowVars.fileName]" value="#[payload]" contentType="application/csv" doc:name="Attachment"/>
+    </sub-flow>
+    <sub-flow name="getSalesforceAccounts">
+        <sfdc:query config-ref="Salesforce__Basic_Authentication" query="dsql:SELECT AccountNumber,BillingCity,BillingCountry,BillingPostalCode,BillingState,CreatedById,CreatedDate,Id,LastModifiedById,LastModifiedDate,Name,Phone FROM Account" doc:name="Get Accounts"/>
+        <set-variable variableName="numRecords" value="#[payload.size()]" doc:name="Set numRecords"/>
+        <set-variable variableName="fileName" value="account.csv" doc:name="Set fileName"/>
+        <flow-ref name="attachCSV" doc:name="attachCSV"/>
+        <set-payload value="No. of  account records: #[flowVars.numRecords]" doc:name="Set Payload"/>
+    </sub-flow>
+    <sub-flow name="getSalesforceProducts">
+        <sfdc:query config-ref="Salesforce__Basic_Authentication" query="dsql:SELECT CreatedById,CreatedDate,Id,IsActive,IsDeleted,LastModifiedById,LastModifiedDate,Name,ProductCode FROM Product2" doc:name="Get Products"/>
+        <set-variable variableName="numRecords" value="#[payload.size()]" doc:name="Set numRecords"/>
+        <set-variable variableName="fileName" value="product.csv" doc:name="Set fileName"/>
+
+        <flow-ref name="attachCSV" doc:name="attachCSV"/>
+        <set-payload value="No. of  product records: #[flowVars.numRecords]" doc:name="Set Payload"/>
+    </sub-flow>
+    <sub-flow name="getSalesforceProductsNAccounts">
+        <scatter-gather doc:name="Scatter-Gather" metadata:id="35a3e5d0-c4f8-42c2-9e72-7a085ec7bc7a">
+            <custom-aggregation-strategy class="com.emr.custom.CustomAggregationStrategy"/>
+            <flow-ref name="getSalesforceProducts" doc:name="getSalesforceProducts"/>
+            <flow-ref name="getSalesforceAccounts" doc:name="getSalesforceAccounts"/>
+        </scatter-gather>
+        <logger level="INFO" doc:name="Logger"/>
+
+    </sub-flow>
+</mule>
