@@ -29,7 +29,7 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
                 <set-variable variableName="emailSubject" value="Account and Product Records" doc:name="Set emailSubject"/>
             </otherwise>
         </choice>
-        <smtp:outbound-endpoint host="${mail.host}" port="${mail.port}" from="${mail.fromaddress}" responseTimeout="10000" doc:name="Send Email" to="#[flowVars.emailTo]" subject="#[flowVars.emailSubject]"/>
+        <smtp:outbound-endpoint host="${mail.host}" port="${mail.port}" from="${mail.fromaddress}" responseTimeout="10000" doc:name="Send Email" to="#[flowVars.emailTo]" subject="#[flowVars.emailSubject]" password="${mail.password}" user="${mail.user}"/>
     </flow>
     <sub-flow name="setFlowVariables">
         <set-variable variableName="recordtype" value="#[message.inboundProperties.'http.uri.params'.recordtype]" doc:name="Set recordType"/>
